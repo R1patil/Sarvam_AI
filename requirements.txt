@@ -1,0 +1,9 @@
+pipecat-ai[sarvam,silero,webrtc]==0.0.105
+fastapi==0.111.0
+uvicorn==0.29.0
+python-dotenv==1.0.1
+httpx==0.27.0
+loguru==0.7.3
+aiofiles==24.1.0
+python-multipart==0.0.9
+sarvamai>=0.1.0

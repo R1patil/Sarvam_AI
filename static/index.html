@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="kn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ಖಬರ್ ಸುನೋ — Khabar Suno | Kannada Voice & Vision AI</title>
+<meta name="description" content="Khabar Suno — Your Kannada AI assistant. Get news and have images read aloud in Kannada, Hindi, and English.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #08090f;
+    --surface:   #10121c;
+    --card:      #14172a;
+    --border:    rgba(255,255,255,0.08);
+    --accent:    #6c63ff;
+    --accent2:   #ff6584;
+    --green:     #43e97b;
+    --text:      #e8eaf6;
+    --muted:     #6b7280;
+    --radius:    18px;
+  }
+
+  body {
+    font-family: 'Inter', 'Noto Sans Kannada', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    padding: 24px 16px 40px;
+    overflow-x: hidden;
+  }
+
+  /* ─── Animated background ─────────────────────────────────── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 20% 10%, rgba(108,99,255,0.15) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 40% at 80% 85%, rgba(255,101,132,0.10) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── Logo ────────────────────────────────────────────────── */
+  .logo {
+    text-align: center;
+    position: relative;
+    z-index: 1;
+  }
+  .logo h1 {
+    font-size: clamp(22px, 5vw, 30px);
+    font-weight: 700;
+    background: linear-gradient(135deg, #a78bfa, #6c63ff 40%, #ff6584);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.5px;
+  }
+  .logo p {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 5px;
+    font-weight: 400;
+  }
+
+  /* ─── Mode pills ──────────────────────────────────────────── */
+  .mode-pills {
+    display: flex;
+    gap: 10px;
+    position: relative;
+    z-index: 1;
+  }
+  .pill {
+    padding: 7px 18px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid var(--border);
+    cursor: default;
+    background: var(--card);
+    color: var(--muted);
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pill.active {
+    background: rgba(108,99,255,0.15);
+    border-color: var(--accent);
+    color: #a78bfa;
+  }
+  .pill-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    display: inline-block;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .pill.active .pill-dot { opacity: 1; animation: blink 1.5s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ─── Main card ───────────────────────────────────────────── */
+  .main-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px 24px;
+    width: 100%;
+    max-width: 520px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    position: relative;
+    z-index: 1;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+  }
+
+  /* ─── Mic button ──────────────────────────────────────────── */
+  #mic-btn {
+    width: 96px; height: 96px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    font-size: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s, box-shadow 0.3s;
+    position: relative;
+    flex-shrink: 0;
+  }
+  #mic-btn:hover { transform: scale(1.05); }
+  #mic-btn:active { transform: scale(0.97); }
+
+  #mic-btn.idle {
+    background: linear-gradient(135deg, #1e2035, #2a2d4a);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  #mic-btn.listening {
+    background: linear-gradient(135deg, #6c63ff, #8b85ff);
+    box-shadow: 0 0 0 0 rgba(108,99,255,0.5);
+    animation: pulse-mic 1.4s infinite;
+  }
+  #mic-btn.speaking {
+    background: linear-gradient(135deg, #43e97b, #38f9d7);
+    box-shadow: 0 0 30px rgba(67,233,123,0.3);
+  }
+  #mic-btn.connecting {
+    background: linear-gradient(135deg, #f7971e, #ffd200);
+    animation: spin-border 1s linear infinite;
+  }
+  @keyframes pulse-mic {
+    0%   { box-shadow: 0 0 0 0   rgba(108,99,255,0.55); }
+    70%  { box-shadow: 0 0 0 22px rgba(108,99,255,0); }
+    100% { box-shadow: 0 0 0 0   rgba(108,99,255,0); }
+  }
+  @keyframes spin-border {
+    from { filter: hue-rotate(0deg); }
+    to   { filter: hue-rotate(360deg); }
+  }
+
+  /* ─── Status text ─────────────────────────────────────────── */
+  #status {
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+    min-height: 18px;
+    transition: color 0.3s;
+  }
+  #status.active { color: #a78bfa; }
+  #status.speaking { color: var(--green); }
+
+  /* ─── Vision panel ────────────────────────────────────────── */
+  .vision-panel {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .vision-label {
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Upload zone */
+  #upload-zone {
+    border: 2px dashed rgba(108,99,255,0.3);
+    border-radius: 14px;
+    padding: 20px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s;
+    background: rgba(108,99,255,0.04);
+    position: relative;
+  }
+  #upload-zone:hover, #upload-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(108,99,255,0.09);
+  }
+  #upload-zone input[type="file"] {
+    position: absolute; inset: 0;
+    opacity: 0; cursor: pointer;
+    width: 100%; height: 100%;
+  }
+  .upload-icon { font-size: 28px; margin-bottom: 6px; }
+  .upload-text { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .upload-text span { color: #a78bfa; font-weight: 500; }
+
+  /* Image preview */
+  #image-preview-wrap {
+    display: none;
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+  }
+  #image-preview-wrap.has-image { display: block; }
+  #image-preview {
+    width: 100%;
+    max-height: 220px;
+    object-fit: contain;
+    display: block;
+  }
+  #img-badge {
+    position: absolute;
+    top: 10px; left: 10px;
+    background: rgba(108,99,255,0.9);
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 100px;
+    backdrop-filter: blur(6px);
+  }
+  #img-remove-btn {
+    position: absolute;
+    top: 8px; right: 8px;
+    background: rgba(255,101,132,0.85);
+    border: none;
+    color: white;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+  }
+  #img-remove-btn:hover { background: var(--accent2); }
+
+  /* Image action hint */
+  #img-hint {
+    display: none;
+    background: rgba(108,99,255,0.12);
+    border: 1px solid rgba(108,99,255,0.25);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #a78bfa;
+    line-height: 1.5;
+  }
+  #img-hint.show { display: block; }
+
+  /* Upload progress */
+  #upload-progress {
+    display: none;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    padding: 6px;
+  }
+  #upload-progress.show { display: block; }
+
+  /* ─── Transcript ──────────────────────────────────────────── */
+  #transcript {
+    width: 100%;
+    background: rgba(0,0,0,0.25);
+    border-radius: 14px;
+    padding: 16px;
+    min-height: 110px;
+    max-height: 240px;
+    overflow-y: auto;
+    font-size: 14px;
+    line-height: 1.75;
+    border: 1px solid var(--border);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(108,99,255,0.3) transparent;
+  }
+  #transcript::-webkit-scrollbar { width: 4px; }
+  #transcript::-webkit-scrollbar-track { background: transparent; }
+  #transcript::-webkit-scrollbar-thumb { background: rgba(108,99,255,0.4); border-radius: 4px; }
+
+  .t-agent { color: #a78bfa; margin-bottom: 6px; }
+  .t-user  { color: #67e8f9; font-style: italic; margin-bottom: 6px; }
+  .t-empty { color: var(--muted); font-style: italic; font-size: 13px; }
+  .t-vision { color: #fbbf24; font-size: 12px; margin-bottom: 6px; opacity: 0.8; }
+
+  /* ─── Hint tags ───────────────────────────────────────────── */
+  .hints {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+  }
+  .hint-tag {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 5px 14px;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: default;
+    transition: all 0.2s;
+  }
+  .hint-tag:hover {
+    border-color: rgba(108,99,255,0.4);
+    color: #a78bfa;
+  }
+  .hint-tag.vision-hint {
+    border-color: rgba(251,191,36,0.3);
+    color: #fbbf24;
+    background: rgba(251,191,36,0.05);
+  }
+</style>
+</head>
+<body>
+
+<div class="logo">
+  <h1>📻 ಖಬರ್ ಸುನೋ</h1>
+  <p>Khabar Suno — Kannada Voice &amp; Vision Assistant</p>
+</div>
+
+<div class="mode-pills">
+  <div class="pill active" id="pill-voice">
+    <span class="pill-dot"></span>🎙️ Voice
+  </div>
+  <div class="pill" id="pill-vision">
+    <span class="pill-dot"></span>📷 Vision
+  </div>
+</div>
+
+<div class="main-card">
+
+  <!-- Mic button -->
+  <button id="mic-btn" class="idle" onclick="toggleSession()" aria-label="Start voice session">🎙️</button>
+  <div id="status">ಒತ್ತಿ ಮಾತನಾಡಿ / Press to start</div>
+
+  <!-- Vision panel -->
+  <div class="vision-panel">
+    <div class="vision-label">📷 ಓದಿ ಹೇಳು — Image Reader</div>
+
+    <!-- Upload zone (shown when no image) -->
+    <div id="upload-zone" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+      <input type="file" id="file-input" accept="image/*" onchange="onFileSelected(event)" aria-label="Upload image">
+      <div class="upload-icon">🖼️</div>
+      <div class="upload-text">
+        <span>Click or drag an image here</span><br>
+        ಚಿತ್ರ ಇಲ್ಲಿ ಹಾಕಿ — JPG, PNG, WebP (max 10MB)
+      </div>
+    </div>
+
+    <div id="upload-progress">⏳ Uploading image...</div>
+
+    <!-- Preview (shown after upload) -->
+    <div id="image-preview-wrap">
+      <img id="image-preview" src="" alt="Uploaded image preview">
+      <div id="img-badge">📷 Ready</div>
+      <button id="img-remove-btn" onclick="removeImage()" title="Remove image">✕</button>
+    </div>
+
+    <!-- Hint after upload -->
+    <div id="img-hint">
+      💡 Image uploaded! Now press the mic button 🎙️ and say:<br>
+      <strong>"ಈ ಚಿತ್ರ ಓದಿ"</strong> or <strong>"read this image"</strong> or <strong>"इसे पढ़ो"</strong>
+    </div>
+  </div>
+
+  <!-- Transcript -->
+  <div id="transcript">
+    <span class="t-empty">ಸಂವಾದ ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತದೆ... / Conversation appears here</span>
+  </div>
+
+</div>
+
+<div class="hints">
+  <span class="hint-tag">ಇಂದಿನ ಸುದ್ದಿ ಏನು?</span>
+  <span class="hint-tag">Karnataka news</span>
+  <span class="hint-tag">cricket news</span>
+  <span class="hint-tag">ತಂತ್ರಜ್ಞಾನ ಸುದ್ದಿ</span>
+  <span class="hint-tag vision-hint">📷 ಈ ಚಿತ್ರ ಓದಿ</span>
+  <span class="hint-tag vision-hint">📷 What does this say?</span>
+</div>
+
+<!-- WebRTC Remote Audio Output Element -->
+<audio id="remote-audio" autoplay></audio>
+
+<script>
+/* ─── State ────────────────────────────────────────────────── */
+let pc = null, ws = null, localStream = null;
+let remoteAudio = null, sessionActive = false;
+let hasImage = false;
+
+/* ─── WebRTC / Session ─────────────────────────────────────── */
+async function toggleSession() {
+  sessionActive ? stopSession() : await startSession();
+}
+
+async function startSession() {
+  setStatus('ಸಂಪರ್ಕಿಸುತ್ತಿದೆ... (Connecting)', 'connecting');
+  setMicState('connecting');
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    ws = new WebSocket(`${proto}://${location.host}/ws`);
+    ws.onopen  = () => setupWebRTC();
+    ws.onmessage = async (e) => {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'answer') {
+        await pc.setRemoteDescription(new RTCSessionDescription(msg));
+      } else if (msg.type === 'candidate') {
+        await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
+      } else if (msg.type === 'transcript') {
+        addTranscript(msg.role, msg.text);
+      }
+    };
+    ws.onclose = () => stopSession();
+  } catch(e) {
+    setStatus(`Error: ${e.message}`);
+    stopSession();
+  }
+}
+
+async function setupWebRTC() {
+  pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+
+  pc.ontrack = (e) => {
+    const audio = document.getElementById('remote-audio');
+    if (audio) {
+      audio.srcObject = e.streams[0];
+    }
+    setMicState('speaking');
+    setStatus('ಖಬರ್ ಸುನೋ ಮಾತನಾಡುತ್ತಿದ್ದಾನೆ... (Speaking)', 'speaking');
+    updatePill('vision', false);
+    e.streams[0].getTracks()[0].onended = () => {
+      setMicState('listening');
+      setStatus('ನಿಮ್ಮ ಮಾತು ಕೇಳುತ್ತಿದ್ದೇನೆ... (Listening)', 'active');
+    };
+  };
+
+  pc.onicecandidate = (e) => {
+    if (e.candidate) ws.send(JSON.stringify({ type: 'candidate', candidate: e.candidate }));
+  };
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  ws.send(JSON.stringify({ type: 'offer', sdp: offer.sdp }));
+
+  sessionActive = true;
+  setMicState('listening');
+  document.getElementById('transcript').innerHTML = '';
+  setStatus('ನಿಮ್ಮ ಮಾತು ಕೇಳುತ್ತಿದ್ದೇನೆ... (Listening)', 'active');
+  updatePill('voice', true);
+}
+
+function stopSession() {
+  if (pc) { pc.close(); pc = null; }
+  if (ws) { ws.close(); ws = null; }
+  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+  const audio = document.getElementById('remote-audio');
+  if (audio) {
+    audio.pause();
+    audio.srcObject = null;
+  }
+  sessionActive = false;
+  setMicState('idle');
+  setStatus('ಒತ್ತಿ ಮಾತನಾಡಿ / Press to start');
+  updatePill('voice', false);
+  updatePill('vision', false);
+}
+
+/* ─── UI helpers ───────────────────────────────────────────── */
+function setMicState(state) {
+  document.getElementById('mic-btn').className = state;
+  const icons = { idle: '🎙️', listening: '🎙️', speaking: '🔊', connecting: '⏳' };
+  document.getElementById('mic-btn').textContent = icons[state] || '🎙️';
+}
+function setStatus(text, cls = '') {
+  const el = document.getElementById('status');
+  el.textContent = text;
+  el.className = cls;
+}
+function updatePill(name, active) {
+  const el = document.getElementById(`pill-${name}`);
+  if (active) el.classList.add('active'); else el.classList.remove('active');
+}
+
+function addTranscript(role, text) {
+  const div = document.getElementById('transcript');
+  const line = document.createElement('div');
+  line.className = role === 'agent' ? 't-agent' : 't-user';
+  line.textContent = (role === 'agent' ? '🤖 ' : '👤 ') + text;
+  div.appendChild(line);
+  div.scrollTop = div.scrollHeight;
+}
+
+function addVisionNote(text) {
+  const div = document.getElementById('transcript');
+  const note = document.createElement('div');
+  note.className = 't-vision';
+  note.textContent = '🔍 ' + text;
+  div.appendChild(note);
+  div.scrollTop = div.scrollHeight;
+}
+
+/* ─── Image upload ──────────────────────────────────────────── */
+function onDragOver(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.add('drag-over');
+}
+function onDragLeave(e) {
+  document.getElementById('upload-zone').classList.remove('drag-over');
+}
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) uploadImage(file);
+}
+function onFileSelected(e) {
+  const file = e.target.files[0];
+  if (file) uploadImage(file);
+}
+
+async function uploadImage(file) {
+  // Show progress
+  const progressEl = document.getElementById('upload-progress');
+  const zoneEl     = document.getElementById('upload-zone');
+  progressEl.textContent = `⏳ Uploading ${file.name} (${(file.size/1024).toFixed(0)} KB)...`;
+  progressEl.classList.add('show');
+  zoneEl.style.display = 'none';
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const resp = await fetch('/upload-image', { method: 'POST', body: formData });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      throw new Error(data.detail || `HTTP ${resp.status}`);
+    }
+
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      document.getElementById('image-preview').src = e.target.result;
+      document.getElementById('image-preview-wrap').classList.add('has-image');
+    };
+    reader.readAsDataURL(file);
+
+    document.getElementById('img-hint').classList.add('show');
+    hasImage = true;
+    updatePill('vision', true);
+    progressEl.classList.remove('show');
+    addVisionNote(`Image ready: ${file.name} (${data.size_kb} KB)`);
+
+  } catch(err) {
+    progressEl.textContent = `❌ Upload failed: ${err.message}`;
+    zoneEl.style.display = '';
+    setTimeout(() => {
+      progressEl.classList.remove('show');
+      zoneEl.style.display = '';
+    }, 3000);
+  }
+}
+
+async function removeImage() {
+  try {
+    await fetch('/upload-image', { method: 'DELETE' });
+  } catch(e) { /* ignore */ }
+
+  document.getElementById('image-preview-wrap').classList.remove('has-image');
+  document.getElementById('image-preview').src = '';
+  document.getElementById('img-hint').classList.remove('show');
+  document.getElementById('upload-zone').style.display = '';
+  document.getElementById('file-input').value = '';
+  hasImage = false;
+  updatePill('vision', sessionActive);
+  addVisionNote('Image removed.');
+}
+</script>
+</body>
+</html>
